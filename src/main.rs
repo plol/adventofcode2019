@@ -282,13 +282,64 @@ mod advent_03 {
     }
 }
 
+mod advent_04 {
+    pub fn stupid_1() {
+        let mut answer = 0;
+        for i in 347312..805915 {
+            let x = format!("{:06}", i);
+            let mut matches = true;
+
+            let mut has_duplicate = false;
+            let mut prev = '\0';
+            for d in x.chars() {
+                if d == prev {
+                    has_duplicate = true;
+                }
+                if d < prev {
+                    matches = false;
+                }
+                prev = d;
+            }
+            matches = matches && has_duplicate;
+
+            if matches {
+                answer += 1;
+            }
+        }
+        println!("{}", answer);
+    }
+    pub fn stupid_2() {
+        let mut answer = 0;
+        for i in 347312..805915 {
+            let x = format!("{:06}", i);
+            let mut matches = true;
+
+            let mut duplicates = std::collections::HashSet::new();
+            let mut meh = std::collections::HashSet::new();
+            let mut prev = '\0';
+            for d in x.chars() {
+                if d == prev {
+                    if duplicates.contains(&d) {
+                        meh.insert(d);
+                    } else {
+                        duplicates.insert(d);
+                    }
+                }
+                if d < prev {
+                    matches = false;
+                }
+                prev = d;
+            }
+            matches = matches && duplicates.difference(&meh).count() > 0;
+
+            if matches {
+                answer += 1;
+            }
+        }
+        println!("{}", answer);
+    }
+}
+
 fn main() {
-    //advent_03::test1();
-    //advent_03::test2();
-    //advent_03::test3();
-    //advent_03::main1(read_input("inputs/input3"));
-    advent_03::test4();
-    advent_03::test5();
-    advent_03::test6();
-    advent_03::main2(read_input("inputs/input3"));
+    advent_04::stupid_2();
 }
