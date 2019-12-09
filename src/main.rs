@@ -755,9 +755,48 @@ mod advent_07 {
     }
 }
 
+mod advent_09 {
+    use super::intcode;
+
+    pub fn test1() {
+        intcode::run_intcode_with_inputs_and_print_outputs(
+            &vec![
+                109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99,
+            ],
+            &Vec::<i64>::new(),
+        );
+
+        intcode::run_intcode_with_inputs_and_print_outputs(
+            &vec![1102, 34915192, 34915192, 7, 4, 7, 99, 0],
+            &Vec::<i64>::new(),
+        );
+
+        intcode::run_intcode_with_inputs_and_print_outputs(
+            &vec![104, 1125899906842624, 99],
+            &Vec::<i64>::new(),
+        );
+    }
+
+    pub fn main1(input: Vec<String>) {
+        let mem: Vec<i64> = input
+            .join("")
+            .split(|c| c == ',')
+            .map(|x| x.parse().unwrap())
+            .collect();
+        intcode::run_intcode_with_inputs_and_print_outputs(&mem, &vec![1]);
+    }
+    pub fn main2(input: Vec<String>) {
+        let mem: Vec<i64> = input
+            .join("")
+            .split(|c| c == ',')
+            .map(|x| x.parse().unwrap())
+            .collect();
+        intcode::run_intcode_with_inputs_and_print_outputs(&mem, &vec![2]);
+    }
+}
+
 fn main() {
-    advent_07::test();
-    advent_07::main(read_input("inputs/input7"));
-    advent_07::test2();
-    advent_07::main2(read_input("inputs/input7"));
+    //advent_09::test1();
+    advent_09::main1(read_input("inputs/input9"));
+    advent_09::main2(read_input("inputs/input9"));
 }
