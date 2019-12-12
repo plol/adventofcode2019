@@ -1128,8 +1128,119 @@ mod advent_10 {
     }
 }
 
+mod advent_11 {
+    use super::intcode;
+
+    enum RobotMovementState {
+        JustMoved,
+        JustPainted,
+    }
+
+    pub fn render(painted_squares: &std::collections::HashMap<(i64, i64), i64>) {
+        let min_x = painted_squares.keys().min_by_key(|k| k.0).unwrap().0;
+        let min_y = painted_squares.keys().min_by_key(|k| k.1).unwrap().1;
+        let max_x = painted_squares.keys().max_by_key(|k| k.0).unwrap().0;
+        let max_y = painted_squares.keys().max_by_key(|k| k.1).unwrap().1;
+        println!("between {},{} and {},{}", min_x, min_y, max_x, max_y);
+
+        let dx = max_x - min_x;
+        let dy = max_y - min_y;
+
+        for y in 0..dy + 1 {
+            for x in 0..dx + 1 {
+                let color = *painted_squares
+                    .get(&(x + min_x, (dy - y) + min_y))
+                    .unwrap_or(&0);
+                print!(
+                    "{}",
+                    match color {
+                        0 => " ",
+                        1 => "#",
+                        _ => panic!(),
+                    }
+                );
+            }
+            println!("");
+        }
+    }
+
+    pub fn test1(input: Vec<String>) {
+        let mem = input
+            .join("")
+            .split(|c| c == ',')
+            .map(|x| x.parse().unwrap())
+            .collect();
+        let mut painted_squares = std::collections::HashMap::<(i64, i64), i64>::new();
+
+        let mut robot_brain = intcode::IntcodeComputer::new(&mem);
+        let mut robot_movement_state = RobotMovementState::JustMoved;
+        let mut robot_heading = (0, 1);
+        let mut current_robot_pos = (0, 0);
+
+        robot_brain.run();
+
+        let mut is_first_input = true;
+
+        loop {
+            match robot_brain.state {
+                intcode::IntcodeState::NeedsInput => {
+                    //println!(
+                    //    "{}: Robot at {:?} reads input {}",
+                    //    i,
+                    //    current_robot_pos,
+                    //    *painted_squares.get(&current_robot_pos).unwrap_or(&0)
+                    //);
+                    robot_brain.provide_input(
+                        *painted_squares
+                            .get(&current_robot_pos)
+                            .unwrap_or(if is_first_input { &1 } else { &0 }),
+                    );
+                    is_first_input = false;
+                }
+                intcode::IntcodeState::Output(x) => {
+                    //println!("{}: Robot output {:?}", i, x);
+                    match robot_movement_state {
+                        RobotMovementState::JustMoved => {
+                            //println!("Painting {:?} to {}", current_robot_pos, x);
+                            painted_squares.insert(current_robot_pos, x);
+                            robot_movement_state = RobotMovementState::JustPainted;
+                        }
+                        RobotMovementState::JustPainted => {
+                            //print!(
+                            //    "Turning! {} ({}), {:?}",
+                            //    x,
+                            //    if x == 1 { "right" } else { "left" },
+                            //    robot_heading
+                            //);
+                            robot_heading = match x {
+                                0 => (-robot_heading.1, robot_heading.0),
+                                1 => (robot_heading.1, -robot_heading.0),
+                                _ => panic!(),
+                            };
+                            //print!(" to {:?}", robot_heading);
+                            current_robot_pos = (
+                                current_robot_pos.0 + robot_heading.0,
+                                current_robot_pos.1 + robot_heading.1,
+                            );
+                            //println!(" and moved to {:?}", current_robot_pos);
+                            robot_movement_state = RobotMovementState::JustMoved;
+                        }
+                    }
+                    robot_brain.run();
+                }
+                intcode::IntcodeState::Halt => {
+                    break;
+                }
+                _ => panic!(),
+            }
+        }
+
+        render(&painted_squares);
+        println!("{:?}", painted_squares.len());
+    }
+}
+
 fn main() {
-    //advent_10::test2();
-    advent_10::main1(read_input("inputs/input10"));
-    advent_10::main2(read_input("inputs/input10"));
+    advent_11::test1(read_input("inputs/input11"));
+    //advent_11::main1(read_input("inputs/input11"));
 }

@@ -20,6 +20,8 @@ pub struct IntcodeComputer {
     pub state: IntcodeState,
     pub input_pos: usize,
     pub mem: Vec<i64>,
+
+    pub trace: bool,
 }
 
 impl IntcodeComputer {
@@ -30,6 +32,7 @@ impl IntcodeComputer {
             state: IntcodeState::NotYetStarted,
             input_pos: 0,
             mem: initial_mem.clone(),
+            trace: false,
         }
     }
     pub fn run(&mut self) {
@@ -45,6 +48,12 @@ impl IntcodeComputer {
             IntcodeState::NeedsInput => (),
             _ => panic!("Needs state NeedsInput, was {:?}", self.state),
         };
+        if self.trace {
+            println!(
+                "was provided input {} and stored at {}",
+                input, self.input_pos
+            );
+        }
         self.write(self.input_pos, input);
         self.exec();
     }
@@ -57,7 +66,6 @@ impl IntcodeComputer {
     }
 
     fn pointer_value(&self, instr: &str, param_number: usize) -> usize {
-        //fn get_value(mem: &Vec<i64>, instr: &str, instr_number: usize, pointer_or_value: i64) -> i64 {
         let pointer = self.mem[self.pc + param_number];
         match instr.chars().nth(instr.len() - 2 - param_number).unwrap() {
             '0' => pointer as usize,
@@ -66,7 +74,6 @@ impl IntcodeComputer {
         }
     }
     fn param_value(&self, instr: &str, param_number: usize) -> i64 {
-        //fn get_value(mem: &Vec<i64>, instr: &str, instr_number: usize, pointer_or_value: i64) -> i64 {
         let pointer_or_value = self.mem[self.pc + param_number];
         match instr.chars().nth(instr.len() - 2 - param_number).unwrap() {
             '0' => self.read(pointer_or_value as usize),
@@ -99,7 +106,9 @@ impl IntcodeComputer {
                     let b = self.param_value(&instr, 2);
                     let output_pos = self.pointer_value(&instr, 3);
                     let c = a + b;
-                    //println!("store {} = {} + {} at {}", c, a, b, output_pos);
+                    if self.trace {
+                        println!("store {} = {} + {} at {}", c, a, b, output_pos);
+                    }
                     self.write(output_pos, c);
                     self.pc += 4;
                 }
@@ -108,7 +117,9 @@ impl IntcodeComputer {
                     let b = self.param_value(&instr, 2);
                     let output_pos = self.pointer_value(&instr, 3);
                     let c = a * b;
-                    //println!("store {} = {} * {} at {}", c, a, b, output_pos);
+                    if self.trace {
+                        println!("store {} = {} * {} at {}", c, a, b, output_pos);
+                    }
                     self.write(output_pos, c);
                     self.pc += 4;
                 }
@@ -116,12 +127,18 @@ impl IntcodeComputer {
                     self.input_pos = self.pointer_value(&instr, 1);
                     self.state = IntcodeState::NeedsInput;
                     self.pc += 2;
+                    if self.trace {
+                        println!("wait for input to store at {}", self.input_pos);
+                    }
                     return;
                 }
                 "04" => {
                     let a = self.param_value(&instr, 1);
                     self.pc += 2;
                     self.state = IntcodeState::Output(a);
+                    if self.trace {
+                        println!("output {}, waiting for it to be read", a);
+                    }
                     return;
                 }
                 "05" => {
@@ -137,8 +154,14 @@ impl IntcodeComputer {
                     let a = self.param_value(&instr, 1);
                     let b = self.param_value(&instr, 2);
                     if a == 0 {
+                        if self.trace {
+                            println!("jump to {} due to {} == 0", b, a);
+                        }
                         self.pc = b as usize;
                     } else {
+                        if self.trace {
+                            println!("does not jump to {} due to {} != 0", b, a);
+                        }
                         self.pc += 3;
                     }
                 }
@@ -146,22 +169,42 @@ impl IntcodeComputer {
                     let a = self.param_value(&instr, 1);
                     let b = self.param_value(&instr, 2);
                     let output_pos = self.pointer_value(&instr, 3);
-                    self.write(output_pos, if a < b { 1 } else { 0 });
+                    let val = if a < b { 1 } else { 0 };
+                    if self.trace {
+                        println!(
+                            "write {} to {} due to comparison of {} < {}",
+                            val, output_pos, a, b
+                        );
+                    }
+                    self.write(output_pos, val);
                     self.pc += 4;
                 }
                 "08" => {
                     let a = self.param_value(&instr, 1);
                     let b = self.param_value(&instr, 2);
                     let output_pos = self.pointer_value(&instr, 3);
-                    self.write(output_pos, if a == b { 1 } else { 0 });
+                    let val = if a == b { 1 } else { 0 };
+                    if self.trace {
+                        println!(
+                            "write {} to {} due to comparison of {} == {}",
+                            val, output_pos, a, b
+                        );
+                    }
+                    self.write(output_pos, val);
                     self.pc += 4;
                 }
                 "09" => {
                     let a = self.param_value(&instr, 1);
+                    if self.trace {
+                        println!("increase relative base by {} to {}", a, self.relative_base);
+                    }
                     self.relative_base += a;
                     self.pc += 2;
                 }
                 "99" => {
+                    if self.trace {
+                        println!("halt!");
+                    }
                     self.state = IntcodeState::Halt;
                     return;
                 }
