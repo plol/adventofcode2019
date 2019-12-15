@@ -647,7 +647,7 @@ mod advent_07 {
         permutations2(x.len(), &mut x.clone(), &mut output);
     }
     pub fn run_with_input(initial_mem: &Vec<i64>, config: i64, signal: i64) -> i64 {
-        let mut computer = super::intcode::IntcodeComputer::new(initial_mem);
+        let mut computer = super::intcode::IntcodeComputer::new(initial_mem.clone());
         computer.run();
         computer.provide_input(config);
         computer.provide_input(signal);
@@ -671,11 +671,11 @@ mod advent_07 {
         let mut max = i64::min_value();
         permutations(&vec![5, 6, 7, 8, 9], |v| {
             let mut computers = [
-                super::intcode::IntcodeComputer::new(initial_mem),
-                super::intcode::IntcodeComputer::new(initial_mem),
-                super::intcode::IntcodeComputer::new(initial_mem),
-                super::intcode::IntcodeComputer::new(initial_mem),
-                super::intcode::IntcodeComputer::new(initial_mem),
+                super::intcode::IntcodeComputer::new(initial_mem.clone()),
+                super::intcode::IntcodeComputer::new(initial_mem.clone()),
+                super::intcode::IntcodeComputer::new(initial_mem.clone()),
+                super::intcode::IntcodeComputer::new(initial_mem.clone()),
+                super::intcode::IntcodeComputer::new(initial_mem.clone()),
             ];
             for i in 0..computers.len() {
                 computers[i].run();
@@ -760,19 +760,19 @@ mod advent_09 {
 
     pub fn test1() {
         intcode::run_intcode_with_inputs_and_print_outputs(
-            &vec![
+            vec![
                 109, 1, 204, -1, 1001, 100, 1, 100, 1008, 100, 16, 101, 1006, 101, 0, 99,
             ],
             &Vec::<i64>::new(),
         );
 
         intcode::run_intcode_with_inputs_and_print_outputs(
-            &vec![1102, 34915192, 34915192, 7, 4, 7, 99, 0],
+            vec![1102, 34915192, 34915192, 7, 4, 7, 99, 0],
             &Vec::<i64>::new(),
         );
 
         intcode::run_intcode_with_inputs_and_print_outputs(
-            &vec![104, 1125899906842624, 99],
+            vec![104, 1125899906842624, 99],
             &Vec::<i64>::new(),
         );
     }
@@ -783,7 +783,7 @@ mod advent_09 {
             .split(|c| c == ',')
             .map(|x| x.parse().unwrap())
             .collect();
-        intcode::run_intcode_with_inputs_and_print_outputs(&mem, &vec![1]);
+        intcode::run_intcode_with_inputs_and_print_outputs(mem, &vec![1]);
     }
     pub fn main2(input: Vec<String>) {
         let mem: Vec<i64> = input
@@ -791,7 +791,7 @@ mod advent_09 {
             .split(|c| c == ',')
             .map(|x| x.parse().unwrap())
             .collect();
-        intcode::run_intcode_with_inputs_and_print_outputs(&mem, &vec![2]);
+        intcode::run_intcode_with_inputs_and_print_outputs(mem, &vec![2]);
     }
 }
 
@@ -1172,7 +1172,7 @@ mod advent_11 {
             .collect();
         let mut painted_squares = std::collections::HashMap::<(i64, i64), i64>::new();
 
-        let mut robot_brain = intcode::IntcodeComputer::new(&mem);
+        let mut robot_brain = intcode::IntcodeComputer::new(mem);
         let mut robot_movement_state = RobotMovementState::JustMoved;
         let mut robot_heading = (0, 1);
         let mut current_robot_pos = (0, 0);
@@ -1940,11 +1940,207 @@ mod advent_14 {
     }
 }
 
+mod advent_15 {
+    use super::intcode;
+
+    #[derive(Clone)]
+    struct State {
+        steps: i64,
+        pos: (i64, i64),
+        computer: intcode::IntcodeComputer,
+    }
+
+    fn step(
+        mut state: State,
+        direction: i64,
+        seen: &mut std::collections::HashSet<(i64, i64)>,
+    ) -> Option<(State, bool)> {
+        let (x, y) = state.pos;
+        let next_pos = match direction {
+            1 => (x, y + 1),
+            2 => (x, y - 1),
+            3 => (x - 1, y),
+            4 => (x + 1, y),
+            _ => panic!(),
+        };
+        if seen.contains(&next_pos) {
+            None
+        } else {
+            state.computer.provide_input(direction);
+            match state.computer.current_output().unwrap() {
+                0 => None,
+                1 => {
+                    seen.insert(next_pos);
+                    state.computer.run();
+                    Some((
+                        State {
+                            steps: state.steps + 1,
+                            pos: next_pos,
+                            computer: state.computer,
+                        },
+                        false,
+                    ))
+                }
+                2 => {
+                    seen.insert(next_pos);
+                    state.computer.run();
+                    Some((
+                        State {
+                            steps: state.steps + 1,
+                            pos: next_pos,
+                            computer: state.computer,
+                        },
+                        true,
+                    ))
+                }
+                _ => panic!(),
+            }
+        }
+    }
+    fn step2(
+        state: (i64, i64, i64),
+        direction: i64,
+        map: &std::collections::HashSet<(i64, i64)>,
+        seen: &mut std::collections::HashSet<(i64, i64)>,
+    ) -> Option<(i64, i64, i64)> {
+        let (x, y, num_steps) = state;
+        let next_pos = match direction {
+            1 => (x, y + 1),
+            2 => (x, y - 1),
+            3 => (x - 1, y),
+            4 => (x + 1, y),
+            _ => panic!(),
+        };
+        if seen.contains(&next_pos) {
+            None
+        } else if !map.contains(&next_pos) {
+            None
+        } else {
+            seen.insert(next_pos);
+            Some((next_pos.0, next_pos.1, num_steps + 1))
+        }
+    }
+
+    pub fn main1(input: Vec<String>) {
+        let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
+
+        computer.run();
+
+        let mut queueue = std::collections::VecDeque::new();
+
+        queueue.push_back(State {
+            steps: 0,
+            pos: (0, 0),
+            computer: computer,
+        });
+        let mut seen = std::collections::HashSet::new();
+
+        let pos;
+        let num_steps;
+
+        loop {
+            let state = queueue.pop_front().unwrap();
+
+            if let Some((next_state, finished)) = step(state.clone(), 1, &mut seen) {
+                if finished {
+                    pos = next_state.pos;
+                    num_steps = next_state.steps;
+                    break;
+                } else {
+                    queueue.push_back(next_state);
+                }
+            }
+            if let Some((next_state, finished)) = step(state.clone(), 2, &mut seen) {
+                if finished {
+                    pos = next_state.pos;
+                    num_steps = next_state.steps;
+                    break;
+                } else {
+                    queueue.push_back(next_state);
+                }
+            }
+            if let Some((next_state, finished)) = step(state.clone(), 3, &mut seen) {
+                if finished {
+                    pos = next_state.pos;
+                    num_steps = next_state.steps;
+                    break;
+                } else {
+                    queueue.push_back(next_state);
+                }
+            }
+            if let Some((next_state, finished)) = step(state, 4, &mut seen) {
+                if finished {
+                    pos = next_state.pos;
+                    num_steps = next_state.steps;
+                    break;
+                } else {
+                    queueue.push_back(next_state);
+                }
+            }
+        }
+        println!("Found the exit {:?} after {:?} steps", pos, num_steps);
+    }
+    pub fn main2(input: Vec<String>) {
+        let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
+
+        computer.run();
+
+        let mut queueue = std::collections::VecDeque::new();
+
+        queueue.push_back(State {
+            steps: 0,
+            pos: (0, 0),
+            computer: computer,
+        });
+        let mut seen = std::collections::HashSet::new();
+
+        while queueue.len() > 0 {
+            let state = queueue.pop_front().unwrap();
+
+            if let Some((next_state, _)) = step(state.clone(), 1, &mut seen) {
+                queueue.push_back(next_state);
+            }
+            if let Some((next_state, _)) = step(state.clone(), 2, &mut seen) {
+                queueue.push_back(next_state);
+            }
+            if let Some((next_state, _)) = step(state.clone(), 3, &mut seen) {
+                queueue.push_back(next_state);
+            }
+            if let Some((next_state, _)) = step(state, 4, &mut seen) {
+                queueue.push_back(next_state);
+            }
+        }
+        println!("All seen tiles: {:?}", seen);
+        let mut queueue2 = std::collections::VecDeque::new();
+
+        queueue2.push_back((14, -14, 0));
+        let mut seen2 = std::collections::HashSet::new();
+
+        while queueue2.len() > 0 {
+            let state = queueue2.pop_front().unwrap();
+            println!("{:?}", state);
+
+            if let Some(next_state) = step2(state, 1, &seen, &mut seen2) {
+                queueue2.push_back(next_state);
+            }
+            if let Some(next_state) = step2(state, 2, &seen, &mut seen2) {
+                queueue2.push_back(next_state);
+            }
+            if let Some(next_state) = step2(state, 3, &seen, &mut seen2) {
+                queueue2.push_back(next_state);
+            }
+            if let Some(next_state) = step2(state, 4, &seen, &mut seen2) {
+                queueue2.push_back(next_state);
+            }
+        }
+    }
+}
+
 fn main() {
     let now = std::time::Instant::now();
 
-    advent_14::main1(read_input("inputs/input14"));
-    advent_14::main2(read_input("inputs/input14"));
+    advent_15::main1(read_input("inputs/input15"));
+    advent_15::main2(read_input("inputs/input15"));
 
     let dt = (std::time::Instant::now() - now).as_micros() as f64 / 1000.0;
     println!("Took {} ms", dt);

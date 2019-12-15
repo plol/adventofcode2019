@@ -14,6 +14,7 @@ pub enum IntcodeState {
     Halt,
 }
 
+#[derive(Clone)]
 pub struct IntcodeComputer {
     pub pc: usize,
     pub relative_base: i64,
@@ -25,15 +26,24 @@ pub struct IntcodeComputer {
 }
 
 impl IntcodeComputer {
-    pub fn new(initial_mem: &Vec<i64>) -> Self {
+    pub fn new(initial_mem: Vec<i64>) -> Self {
         Self {
             pc: 0,
             relative_base: 0,
             state: IntcodeState::NotYetStarted,
             input_pos: 0,
-            mem: initial_mem.clone(),
+            mem: initial_mem,
             trace: false,
         }
+    }
+    pub fn new_from_input_lines(input: Vec<String>) -> Self {
+        Self::new(
+            input
+                .join("")
+                .split(|c| c == ',')
+                .map(|x| x.parse().unwrap())
+                .collect(),
+        )
     }
     pub fn run(&mut self) {
         match self.state {
@@ -215,7 +225,7 @@ impl IntcodeComputer {
     }
 }
 
-pub fn run_intcode_with_inputs_and_print_outputs(initial_mem: &Vec<i64>, inputs: &Vec<i64>) {
+pub fn run_intcode_with_inputs_and_print_outputs(initial_mem: Vec<i64>, inputs: &Vec<i64>) {
     let mut computer = IntcodeComputer::new(initial_mem);
     computer.run();
 
