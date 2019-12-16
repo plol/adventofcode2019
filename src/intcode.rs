@@ -36,7 +36,7 @@ impl IntcodeComputer {
             trace: false,
         }
     }
-    pub fn new_from_input_lines(input: Vec<String>) -> Self {
+    pub fn new_from_input_lines(input: &Vec<String>) -> Self {
         Self::new(
             input
                 .join("")
@@ -225,7 +225,13 @@ impl IntcodeComputer {
     }
 }
 
-pub fn run_intcode_with_inputs_and_print_outputs(initial_mem: Vec<i64>, inputs: &Vec<i64>) {
+pub fn run_intcode_with_inputs_and_cb_outputs<F>(
+    initial_mem: Vec<i64>,
+    inputs: &Vec<i64>,
+    mut cb: F,
+) where
+    F: FnMut(i64),
+{
     let mut computer = IntcodeComputer::new(initial_mem);
     computer.run();
 
@@ -237,7 +243,7 @@ pub fn run_intcode_with_inputs_and_print_outputs(initial_mem: Vec<i64>, inputs: 
                 next_input_index += 1;
             }
             IntcodeState::Output(x) => {
-                println!("{}", x);
+                cb(x);
                 computer.run();
             }
             IntcodeState::Halt => break,
@@ -281,7 +287,7 @@ where
 }
 
 pub fn run_intcode_with_inputs_and_iterate_over_outputs<I>(
-    initial_mem: &Vec<i64>,
+    initial_mem: Vec<i64>,
     inputs: I,
 ) -> ComputerOutputIterator<I>
 where
