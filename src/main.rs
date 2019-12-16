@@ -21,6 +21,7 @@ mod advent_12;
 mod advent_13;
 mod advent_14;
 mod advent_15;
+mod advent_16;
 
 fn run_advent<A>(input: Vec<String>, expected1: &str, expected2: &str)
 where
@@ -63,4 +64,5 @@ fn main() {
     run_advent::<advent_13::Advent>(read_input("inputs/input13"), "270", "12535");
     run_advent::<advent_14::Advent>(read_input("inputs/input14"), "248794", "4906796");
     run_advent::<advent_15::Advent>(read_input("inputs/input15"), "336", "360");
+    run_advent::<advent_16::Advent>(read_input("inputs/input16"), "10332447", "14288025");
 }
