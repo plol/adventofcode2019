@@ -235,3 +235,51 @@ pub fn run_intcode_with_inputs_and_print_outputs(initial_mem: &Vec<i64>, inputs:
         }
     }
 }
+
+pub struct ComputerOutputIterator<I>
+where
+    I: Iterator<Item = i64>,
+{
+    computer: IntcodeComputer,
+    inputs: I,
+    next_input_index: usize,
+}
+
+impl<I> Iterator for ComputerOutputIterator<I>
+where
+    I: Iterator<Item = i64>,
+{
+    type Item = i64;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        loop {
+            match self.computer.state {
+                IntcodeState::NeedsInput => {
+                    self.computer.provide_input(self.inputs.next().unwrap());
+                    self.next_input_index += 1;
+                }
+                IntcodeState::Output(x) => {
+                    let ret = Some(x);
+                    self.computer.run();
+                    return ret;
+                }
+                IntcodeState::Halt => return None,
+                IntcodeState::NotYetStarted => self.computer.run(),
+            }
+        }
+    }
+}
+
+pub fn run_intcode_with_inputs_and_iterate_over_outputs<I>(
+    initial_mem: &Vec<i64>,
+    inputs: I,
+) -> ComputerOutputIterator<I>
+where
+    I: Iterator<Item = i64>,
+{
+    ComputerOutputIterator {
+        computer: IntcodeComputer::new(initial_mem),
+        inputs: inputs,
+        next_input_index: 0,
+    }
+}
