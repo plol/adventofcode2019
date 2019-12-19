@@ -34,8 +34,8 @@ where
     let middle = std::time::Instant::now();
     let result2 = A::main2(&input);
     let after = std::time::Instant::now();
-    let dt1 = (middle - before).as_micros() as f64 / 1000.0;
-    let dt2 = (after - middle).as_micros() as f64 / 1000.0;
+    let dt1 = (middle - before).as_nanos() as f64 / 1000000.0;
+    let dt2 = (after - middle).as_nanos() as f64 / 1000000.0;
     if result1 != expected1 {
         println!("part1 failed! Expected {} was {}", expected1, result1);
     }
@@ -43,7 +43,7 @@ where
         println!("part2 failed! Expected {} was {}", expected2, result2);
     }
     println!(
-        "Advent {}: part1 {} ms, part2 {} ms",
+        "Advent {}: part1 {:.1} ms, part2 {:.1} ms",
         A::advent_number(),
         dt1,
         dt2
