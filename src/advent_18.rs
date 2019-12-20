@@ -56,7 +56,8 @@ impl Maze {
         }
 
         let mut matching_doors = vec![];
-        let connections = flood_fill_all_features(&features, &feature_positions, &map, &vec![]);
+        let connections = flood_fill_all_features(&features, &feature_positions, &map);
+
         for i in 0..features.len() {
             if features[i].is_lowercase() {
                 matching_doors.push(
@@ -94,6 +95,7 @@ impl Maze {
                 ),
             );
         }
+
         for start in starting_positions.into_iter() {
             distances.insert(
                 start,
@@ -121,14 +123,21 @@ impl Maze {
 fn flood_fill_to_connected_features(
     pos: Pos,
     maze: &Vec<Vec<char>>,
-    keys: &Vec<char>,
 ) -> std::collections::HashMap<char, usize> {
-    let mut ret = std::collections::HashMap::new();
-    dijkstra(
-        (0, pos),
-        |(cost, _)| *cost,
-        |(_, p)| *p,
-        |(cost, (x, y))| -> (bool, Vec<(usize, Pos)>) {
+    let mut found_features = vec![];
+    let result = super::common::dijkstra::all(
+        pos,
+        |p| *p,
+        |(x, y)| {
+            match maze[y][x] {
+                'a'..='z' | 'A'..='Z' => {
+                    if (x, y) != pos {
+                        found_features.push((x, y));
+                        return vec![];
+                    }
+                }
+                _ => {}
+            }
             let mut candidates = vec![];
             if x > 0 {
                 candidates.push((x - 1, y));
@@ -142,46 +151,34 @@ fn flood_fill_to_connected_features(
             if y + 1 < maze.len() {
                 candidates.push((x, y + 1));
             }
-            (
-                true,
-                candidates
-                    .iter()
-                    .map(|&(cx, cy)| {
-                        let c = maze[cy][cx];
-                        match c {
-                            '#' => None,
-                            '.' => Some((cost + 1, (cx, cy))),
-                            '@' | 'a'..='z' | 'A'..='Z' => {
-                                if c == '@'
-                                    || keys.contains(&c)
-                                    || keys.contains(&c.to_lowercase().nth(0).unwrap())
-                                {
-                                    Some((cost + 1, (cx, cy)))
-                                } else {
-                                    ret.insert(c, cost + 1);
-                                    None
-                                }
-                            }
-                            _ => panic!(),
-                        }
-                    })
-                    .flatten()
-                    .collect(),
-            )
+            candidates
+                .iter()
+                .map(|&(cx, cy)| {
+                    let c = maze[cy][cx];
+                    match c {
+                        '#' => None,
+                        _ => Some(((cx, cy), 1)),
+                    }
+                })
+                .flatten()
+                .collect::<Vec<_>>()
         },
     );
-    ret
+
+    found_features
+        .iter()
+        .map(|&(x, y)| (maze[y][x], result.get_cost(&(x, y)).unwrap()))
+        .collect()
 }
 
 fn flood_fill_all_features(
     features: &Vec<char>,
     feature_positions: &Vec<Pos>,
     map: &Vec<Vec<char>>,
-    keys: &Vec<char>,
 ) -> Vec<Vec<(usize, usize)>> {
     let mut connections = vec![];
     for i in 0..features.len() {
-        let a = flood_fill_to_connected_features(feature_positions[i], map, keys);
+        let a = flood_fill_to_connected_features(feature_positions[i], map);
         connections.push(
             a.iter()
                 .filter(|(feature, _)| **feature != '@')
@@ -197,32 +194,31 @@ fn distances_and_keys_to_all_keys(
     features: &Vec<char>,
     connections: &Vec<Vec<(usize, usize)>>,
 ) -> std::collections::HashMap<Key, (Keys, usize)> {
-    let mut ret = std::collections::HashMap::new();
-    dijkstra(
-        (from_pos, Keys::new(), 0),
-        |(_, _, c)| *c,
-        |(p, _, _)| *p,
-        |(p, mut keys, c)| {
+    let mut found_keys = vec![];
+    let result = super::common::dijkstra::all(
+        (from_pos, Keys::new()),
+        |(p, _)| *p,
+        |(p, mut keys)| {
             if features[p].is_uppercase() {
                 keys = keys.insert(Key::from_door_char(features[p]));
             } else if features[p].is_lowercase() {
-                let key = Key::from_char(features[p]);
-                if p != from_pos {
-                    ret.insert(key, (keys, c));
-                }
+                found_keys.push((p, keys))
             }
-            (
-                true,
-                connections[p]
-                    .iter()
-                    .map(|&(conn, price)| Some((conn, keys, c + price)))
-                    .flatten()
-                    .collect::<Vec<_>>(),
-            )
+            connections[p]
+                .iter()
+                .map(|&(conn, price)| Some(((conn, keys), price)))
+                .flatten()
+                .collect::<Vec<_>>()
         },
     );
 
-    ret
+    found_keys
+        .iter()
+        .map(|&(key_feature, keys)| {
+            let cost = result.get_cost(&key_feature).unwrap();
+            (Key::from_char(features[key_feature]), (keys, cost))
+        })
+        .collect()
 }
 
 fn distance_to_key(pos: usize, keys: Keys, key: Key, maze: &Maze) -> Option<usize> {
@@ -523,47 +519,4 @@ fn blit(mut data: Vec<String>, pos: Pos, to_blit: &[&str]) -> Vec<String> {
         .collect::<String>();
     }
     data
-}
-
-fn dijkstra<State, Cost, Cmp, O, Expand, EIter>(
-    initial_state: State,
-    mut cost: Cost,
-    mut cmp: Cmp,
-    mut expand: Expand,
-) -> Option<EIter>
-where
-    Cost: FnMut(&State) -> usize,
-    Cmp: FnMut(&State) -> O,
-    O: Eq + std::hash::Hash,
-    Expand: FnMut(State) -> (bool, EIter),
-    EIter: IntoIterator<Item = State>,
-{
-    let mut seen = std::collections::HashSet::new();
-    let mut queue = vec![];
-
-    seen.insert(cmp(&initial_state));
-    queue.push((initial_state, 0));
-
-    while !queue.is_empty() {
-        let (item, _) = queue.pop().unwrap();
-        let (should_continue, expanded) = expand(item);
-        if should_continue {
-            for next_item in expanded.into_iter() {
-                let o = cmp(&next_item);
-                let c = cost(&next_item);
-                if !seen.contains(&o) {
-                    if let Some(i) = queue.iter().position(|q| cmp(&q.0) == o && c < q.1) {
-                        queue[i] = (next_item, c)
-                    } else {
-                        queue.push((next_item, c));
-                    }
-                    seen.insert(o);
-                }
-            }
-            queue.sort_by(|i1, i2| i2.1.cmp(&i1.1))
-        } else {
-            return Some(expanded);
-        }
-    }
-    None
 }
