@@ -36,11 +36,10 @@ fn step(
         None
     } else {
         state.computer.provide_input(direction);
-        match state.computer.current_output().unwrap() {
+        match state.computer.consume_output() {
             0 => None,
             1 => {
                 seen.insert(next_pos);
-                state.computer.run();
                 Some((
                     State {
                         steps: state.steps + 1,
@@ -52,7 +51,6 @@ fn step(
             }
             2 => {
                 seen.insert(next_pos);
-                state.computer.run();
                 Some((
                     State {
                         steps: state.steps + 1,
@@ -93,7 +91,7 @@ fn step2(
 pub fn main1(input: &Vec<String>) -> String {
     let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
 
-    computer.run();
+    computer.start();
 
     let mut queueue = std::collections::VecDeque::new();
 
@@ -153,7 +151,7 @@ pub fn main1(input: &Vec<String>) -> String {
 pub fn main2(input: &Vec<String>) -> String {
     let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
 
-    computer.run();
+    computer.start();
 
     let mut queueue = std::collections::VecDeque::new();
 

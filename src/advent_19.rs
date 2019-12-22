@@ -8,7 +8,7 @@ impl super::common::Advent for Advent {
     }
     fn main1(input: &Vec<String>) -> String {
         let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
-        computer.run();
+        computer.start();
 
         let mut sum = 0;
         for y in 0..50 {
@@ -16,7 +16,7 @@ impl super::common::Advent for Advent {
                 let mut computer2 = computer.clone();
                 computer2.provide_input(x);
                 computer2.provide_input(y);
-                sum += computer2.current_output().unwrap();
+                sum += computer2.peek_output().unwrap();
             }
         }
 
@@ -25,7 +25,7 @@ impl super::common::Advent for Advent {
 
     fn main2(input: &Vec<String>) -> String {
         let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
-        computer.run();
+        computer.start();
 
         let mut vals = std::collections::HashMap::new();
 
@@ -61,7 +61,7 @@ fn get_row(
 fn scan_point(mut computer: intcode::IntcodeComputer, x: i64, y: i64) -> i64 {
     computer.provide_input(x);
     computer.provide_input(y);
-    computer.current_output().unwrap()
+    computer.peek_output().unwrap()
 }
 fn scan_line(computer: &intcode::IntcodeComputer, y: i64) -> (i64, i64) {
     let mut x = 0;

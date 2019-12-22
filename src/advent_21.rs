@@ -9,7 +9,7 @@ impl super::common::Advent for Advent {
     fn main1(input: &Vec<String>) -> String {
         let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
 
-        computer.run();
+        computer.start();
 
         let input = "NOT J J
 AND A J
@@ -32,7 +32,7 @@ WALK
     fn main2(input: &Vec<String>) -> String {
         let mut computer = intcode::IntcodeComputer::new_from_input_lines(input);
 
-        computer.run();
+        computer.start();
 
         let input = "NOT J J
 AND A J
@@ -72,12 +72,12 @@ fn run_with_ascii_input_and_return_last_output(
                 computer.provide_input(input[i] as i64);
                 i += 1;
             }
-            intcode::IntcodeState::Output(c) => {
+            intcode::IntcodeState::Output => {
+                let c = computer.consume_output();
                 if output {
                     print!("{}", c as u8 as char);
                 }
                 last_instruction = c;
-                computer.run();
             }
             intcode::IntcodeState::Halt => {
                 break;

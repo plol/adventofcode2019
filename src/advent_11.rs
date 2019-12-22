@@ -59,7 +59,7 @@ pub fn gogo(input: &Vec<String>, print_result: bool, first_input: i64) -> String
     let mut robot_heading = (0, 1);
     let mut current_robot_pos = (0, 0);
 
-    robot_brain.run();
+    robot_brain.start();
 
     let mut is_first_input = true;
 
@@ -79,7 +79,8 @@ pub fn gogo(input: &Vec<String>, print_result: bool, first_input: i64) -> String
                 );
                 is_first_input = false;
             }
-            intcode::IntcodeState::Output(x) => {
+            intcode::IntcodeState::Output => {
+                let x = robot_brain.consume_output();
                 //println!("{}: Robot output {:?}", i, x);
                 match robot_movement_state {
                     RobotMovementState::JustMoved => {
@@ -108,7 +109,6 @@ pub fn gogo(input: &Vec<String>, print_result: bool, first_input: i64) -> String
                         robot_movement_state = RobotMovementState::JustMoved;
                     }
                 }
-                robot_brain.run();
             }
             intcode::IntcodeState::Halt => {
                 break;

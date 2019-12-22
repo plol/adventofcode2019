@@ -10,7 +10,7 @@ fn get_value(mem: &Vec<i64>, instr: &str, instr_number: usize, pointer_or_value:
 pub enum IntcodeState {
     NotYetStarted,
     NeedsInput,
-    Output(i64),
+    Output,
     Halt,
 }
 
@@ -19,8 +19,10 @@ pub struct IntcodeComputer {
     pub pc: usize,
     pub relative_base: i64,
     pub state: IntcodeState,
-    pub input_pos: usize,
     pub mem: Vec<i64>,
+
+    input_pos: usize,
+    output: i64,
 
     pub trace: bool,
 }
@@ -31,8 +33,9 @@ impl IntcodeComputer {
             pc: 0,
             relative_base: 0,
             state: IntcodeState::NotYetStarted,
-            input_pos: 0,
             mem: initial_mem,
+            input_pos: 0,
+            output: 0,
             trace: false,
         }
     }
@@ -45,14 +48,15 @@ impl IntcodeComputer {
                 .collect(),
         )
     }
-    pub fn run(&mut self) {
+
+    pub fn start(&mut self) {
         match self.state {
             IntcodeState::NotYetStarted => (),
-            IntcodeState::Output(_) => (),
             _ => panic!(),
         };
         self.exec();
     }
+
     pub fn provide_input(&mut self, input: i64) {
         match self.state {
             IntcodeState::NeedsInput => (),
@@ -68,10 +72,21 @@ impl IntcodeComputer {
         self.exec();
     }
 
-    pub fn current_output(&self) -> Option<i64> {
+    pub fn peek_output(&self) -> Option<i64> {
         match self.state {
-            IntcodeState::Output(x) => Some(x),
+            IntcodeState::Output => Some(self.output),
             _ => None,
+        }
+    }
+
+    pub fn consume_output(&mut self) -> i64 {
+        match self.state {
+            IntcodeState::Output => {
+                let output = self.output;
+                self.exec();
+                output
+            }
+            _ => panic!(),
         }
     }
 
@@ -83,6 +98,7 @@ impl IntcodeComputer {
             _ => panic!("no"),
         }
     }
+
     fn param_value(&self, instr: &str, param_number: usize) -> i64 {
         let pointer_or_value = self.mem[self.pc + param_number];
         match instr.chars().nth(instr.len() - 2 - param_number).unwrap() {
@@ -100,6 +116,7 @@ impl IntcodeComputer {
             0
         }
     }
+
     fn write(&mut self, location: usize, value: i64) {
         while location >= self.mem.len() {
             self.mem.push(0);
@@ -145,7 +162,8 @@ impl IntcodeComputer {
                 "04" => {
                     let a = self.param_value(&instr, 1);
                     self.pc += 2;
-                    self.state = IntcodeState::Output(a);
+                    self.output = a;
+                    self.state = IntcodeState::Output;
                     if self.trace {
                         println!("output {}, waiting for it to be read", a);
                     }
@@ -220,7 +238,6 @@ impl IntcodeComputer {
                 }
                 _ => panic!("no."),
             }
-            //println!("{:?}", mem);
         }
     }
 }
@@ -233,7 +250,7 @@ pub fn run_intcode_with_inputs_and_cb_outputs<F>(
     F: FnMut(i64),
 {
     let mut computer = IntcodeComputer::new(initial_mem);
-    computer.run();
+    computer.start();
 
     let mut next_input_index = 0;
     loop {
@@ -242,9 +259,8 @@ pub fn run_intcode_with_inputs_and_cb_outputs<F>(
                 computer.provide_input(inputs[next_input_index]);
                 next_input_index += 1;
             }
-            IntcodeState::Output(x) => {
-                cb(x);
-                computer.run();
+            IntcodeState::Output => {
+                cb(computer.consume_output());
             }
             IntcodeState::Halt => break,
             IntcodeState::NotYetStarted => panic!(),
@@ -274,13 +290,11 @@ where
                     self.computer.provide_input(self.inputs.next().unwrap());
                     self.next_input_index += 1;
                 }
-                IntcodeState::Output(x) => {
-                    let ret = Some(x);
-                    self.computer.run();
-                    return ret;
+                IntcodeState::Output => {
+                    return Some(self.computer.consume_output());
                 }
                 IntcodeState::Halt => return None,
-                IntcodeState::NotYetStarted => self.computer.run(),
+                IntcodeState::NotYetStarted => self.computer.start(),
             }
         }
     }

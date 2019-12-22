@@ -48,16 +48,15 @@ impl super::common::Advent for Advent {
         let mut last_output = None;
         loop {
             match computer.state {
-                intcode::IntcodeState::NotYetStarted => computer.run(),
+                intcode::IntcodeState::NotYetStarted => computer.start(),
                 intcode::IntcodeState::NeedsInput => {
                     let c = iter.next().unwrap();
                     //print!("{}", c as u8 as char);
                     computer.provide_input(c);
                 }
-                intcode::IntcodeState::Output(c) => {
+                intcode::IntcodeState::Output => {
                     //print!("{}", c as u8 as char);
-                    last_output = Some(c);
-                    computer.run()
+                    last_output = Some(computer.consume_output());
                 }
                 intcode::IntcodeState::Halt => break,
             }
@@ -74,10 +73,10 @@ fn parse_grid(mut computer: intcode::IntcodeComputer) -> Vec<(i32, i32)> {
     let mut w = 0;
     loop {
         match computer.state {
-            intcode::IntcodeState::NotYetStarted => computer.run(),
+            intcode::IntcodeState::NotYetStarted => computer.start(),
             intcode::IntcodeState::NeedsInput => panic!(),
-            intcode::IntcodeState::Output(c) => {
-                match c as u8 as char {
+            intcode::IntcodeState::Output => {
+                match computer.consume_output() as u8 as char {
                     '.' => {
                         x += 1;
                     }
@@ -100,7 +99,6 @@ fn parse_grid(mut computer: intcode::IntcodeComputer) -> Vec<(i32, i32)> {
                     _ => panic!(),
                 }
                 //print!("{}", c as u8 as char);
-                computer.run()
             }
             intcode::IntcodeState::Halt => break,
         }

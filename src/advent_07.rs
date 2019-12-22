@@ -38,10 +38,10 @@ where
 }
 pub fn run_with_input(initial_mem: &Vec<i64>, config: i64, signal: i64) -> i64 {
     let mut computer = super::intcode::IntcodeComputer::new(initial_mem.clone());
-    computer.run();
+    computer.start();
     computer.provide_input(config);
     computer.provide_input(signal);
-    computer.current_output().unwrap()
+    computer.peek_output().unwrap()
 }
 pub fn run(initial_mem: &Vec<i64>) -> String {
     let mut max = i64::min_value();
@@ -68,7 +68,7 @@ pub fn run2(initial_mem: &Vec<i64>) -> String {
             super::intcode::IntcodeComputer::new(initial_mem.clone()),
         ];
         for i in 0..computers.len() {
-            computers[i].run();
+            computers[i].start();
             computers[i].provide_input(v[i]);
         }
 
@@ -77,19 +77,20 @@ pub fn run2(initial_mem: &Vec<i64>) -> String {
             for i in 0..5 {
                 match (computers[i].state, computers[(i + 1) % 5].state) {
                     (
-                        super::intcode::IntcodeState::Output(x),
+                        super::intcode::IntcodeState::Output,
                         super::intcode::IntcodeState::NeedsInput,
                     ) => {
+                        let x = computers[i].consume_output();
                         computers[(i + 1) % 5].provide_input(x);
-                        computers[i].run();
                     }
                     _ => {}
                 }
             }
 
-            if let (super::intcode::IntcodeState::Halt, super::intcode::IntcodeState::Output(x)) =
+            if let (super::intcode::IntcodeState::Halt, super::intcode::IntcodeState::Output) =
                 (computers[0].state, computers[4].state)
             {
+                let x = computers[4].consume_output();
                 if x > max {
                     max = x;
                 }
